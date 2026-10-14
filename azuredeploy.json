@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.47.16.16243",
-      "templateHash": "10614383241082146319"
+      "version": "0.48.1.52935",
+      "templateHash": "18394923143989928062"
     },
     "description": "Create a DC, a SQL Server 2025, and from 1 to 5 server(s) hosting a SharePoint Subscription Edition farm with an extensive configuration, including trusted authentication, user profiles with personal sites, an OAuth trust (using a certificate), a dedicated IIS site for hosting high-trust add-ins, etc... The latest version of key softwares (including Fiddler, vscode, np++, 7zip, ULS Viewer) is installed. SharePoint machines have additional fine-tuning to make them immediately usable (remote administration tools, custom policies for Edge and Chrome, shortcuts, etc...).",
     "author": "Yvand"
@@ -861,8 +861,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.47.16.16243",
-              "templateHash": "17334275485506708273"
+              "version": "0.48.1.52935",
+              "templateHash": "11447001560714725441"
             }
           },
           "parameters": {
@@ -3495,8 +3495,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.47.16.16243",
-              "templateHash": "6032842197646860997"
+              "version": "0.48.1.52935",
+              "templateHash": "9872385586052569587"
             }
           },
           "parameters": {
@@ -13205,8 +13205,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.47.16.16243",
-              "templateHash": "6032842197646860997"
+              "version": "0.48.1.52935",
+              "templateHash": "9872385586052569587"
             }
           },
           "parameters": {
@@ -22866,8 +22866,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.47.16.16243",
-              "templateHash": "4349498170167151355"
+              "version": "0.48.1.52935",
+              "templateHash": "8176409960052451763"
             }
           },
           "parameters": {
@@ -24633,8 +24633,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.47.16.16243",
-              "templateHash": "15723554098495196992"
+              "version": "0.48.1.52935",
+              "templateHash": "6053976487112939449"
             }
           },
           "parameters": {
