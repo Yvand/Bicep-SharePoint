@@ -407,7 +407,7 @@ var sharePointSubscriptionBits = [
     Label: 'SPLatest'
     Packages: [
       {
-        DownloadUrl: 'https://download.microsoft.com/download/28e5d95a-225d-4669-b3da-2fe1aec3399c/uber-subscription-kb5002908-fullfile-x64-glb.exe'
+        DownloadUrl: 'https://download.microsoft.com/download/23516bd3-8d7e-41c8-9cfd-1fa72bcf52f8/uber-subscription-kb5002927-fullfile-x64-glb.exe'
       }
     ]
   }
