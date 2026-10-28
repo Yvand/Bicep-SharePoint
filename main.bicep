@@ -8,6 +8,8 @@ param location string = resourceGroup().location
 @description('Version of the SharePoint Subscription Edition farm to create.')
 @allowed([
   'Subscription-Latest'
+  'Subscription-26H2'
+  'Subscription-26H1'
   'Subscription-25H2'
   'Subscription-25H1'
   'Subscription-24H2'
@@ -306,7 +308,7 @@ param vmSharePointStorage string = 'StandardSSD_LRS'
 
 @description('The base URI where artifacts required by this template are located.')
  //param _artifactsLocation string = uri(deployment().properties.templateLink.uri, 'dsc/')
-param _artifactsLocation string = 'https://github.com/Yvand/SharePointInfraDsc/releases/download/releases/v3.1.1/'
+param _artifactsLocation string = 'https://github.com/Yvand/SharePointInfraDsc/releases/download/releases/v3.2.1/'
 
 @secure()
 @description('The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated. Use the defaultValue if the staging location is not secured.')
@@ -404,10 +406,26 @@ var sharePointSubscriptionBits = [
     ]
   }
   {
+    Label: 'SP26H1'
+    Packages: [
+      {
+        DownloadUrl: 'https://download.microsoft.com/download/7b4c3ae5-ce9d-4f5d-8e30-cefd28c92c3e/uber-subscription-kb5002873-fullfile-x64-glb.exe'
+      }
+    ]
+  }
+  {
+    Label: 'SP26H2'
+    Packages: [
+      {
+        DownloadUrl: 'https://download.microsoft.com/download/23516bd3-8d7e-41c8-9cfd-1fa72bcf52f8/uber-subscription-kb5002927-fullfile-x64-glb.exe'
+      }
+    ]
+  }
+  {
     Label: 'SPLatest'
     Packages: [
       {
-        DownloadUrl: 'https://download.microsoft.com/download/28e5d95a-225d-4669-b3da-2fe1aec3399c/uber-subscription-kb5002908-fullfile-x64-glb.exe'
+        DownloadUrl: 'https://download.microsoft.com/download/23516bd3-8d7e-41c8-9cfd-1fa72bcf52f8/uber-subscription-kb5002927-fullfile-x64-glb.exe'
       }
     ]
   }

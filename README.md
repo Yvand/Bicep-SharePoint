@@ -47,7 +47,9 @@ az deployment group create --name "sharepoint-quickstart" --resource-group "shar
 ## SharePoint configuration
 
 - Parameter `sharePointVersion` sets which version of SharePoint Subscription Edition will be installed:
-  - `Subscription-Latest` (default): SharePoint Subscription with the latest public update available at the time of publishing this version: September 2026 ([kb5002908](https://support.microsoft.com/help/5002908)).
+  - `Subscription-Latest` (default): SharePoint Subscription with the latest public update available at the time of publishing this version: October 2026 ([kb5002927](https://support.microsoft.com/help/5002927)).
+  - `Subscription-26H2`: SharePoint Subscription with the [Feature Update 26H2](https://learn.microsoft.com/en-us/sharepoint/what-s-new/new-improved-features-sharepoint-server-subscription-edition-2026-h2-release) (October 2026 PU / [kb5002927](https://support.microsoft.com/help/5002927)).
+  - `Subscription-26H1`: SharePoint Subscription with the [Feature Update 26H1](https://learn.microsoft.com/en-us/sharepoint/what-s-new/new-improved-features-sharepoint-server-subscription-edition-2026-h1-release) (June 2026 PU / [KB5002873](https://support.microsoft.com/help/5002873)).
   - `Subscription-25H2`: SharePoint Subscription with the [Feature Update 25H2](https://learn.microsoft.com/sharepoint/what-s-new/new-improved-features-sharepoint-server-subscription-edition-2025-h2-release) (September 2025 PU / [KB5002784](https://support.microsoft.com/help/5002784)).
   - `Subscription-25H1`: SharePoint Subscription with the [Feature Update 25H1](https://learn.microsoft.com/sharepoint/what-s-new/new-and-improved-features-in-sharepoint-server-subscription-edition-25h1-release) (March 2025 PU / [KB5002698](https://support.microsoft.com/help/5002698)).
   - `Subscription-24H2`: SharePoint Subscription with the [Feature Update 24H2](https://learn.microsoft.com/sharepoint/what-s-new/new-and-improved-features-in-sharepoint-server-subscription-edition-24h2-release) (September 2024 PU / [kb5002640](https://support.microsoft.com/help/5002640)).

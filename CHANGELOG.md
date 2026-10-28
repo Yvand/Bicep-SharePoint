@@ -7,6 +7,7 @@
 - Template
   - **BREAKING CHANGE**: Removed values `2019` and `2016` from parameter `sharePointVersion`. Only the existing `Subscription-*` values are supported; `Subscription-Latest` remains the default.
   - Simplified the template to use the Subscription Edition VM image, DSC configurations, installation packages, and Trusted Launch settings without legacy version branches.
+  - Added SharePoint Subscription 26H1 and 26H2 updates
 
 ## Enhancements & bug-fixes - Published in September 17, 2026
 
