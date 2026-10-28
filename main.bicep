@@ -308,7 +308,7 @@ param vmSharePointStorage string = 'StandardSSD_LRS'
 
 @description('The base URI where artifacts required by this template are located.')
  //param _artifactsLocation string = uri(deployment().properties.templateLink.uri, 'dsc/')
-param _artifactsLocation string = 'https://github.com/Yvand/SharePointInfraDsc/releases/download/releases/v3.2.0/'
+param _artifactsLocation string = 'https://github.com/Yvand/SharePointInfraDsc/releases/download/releases/v3.2.1/'
 
 @secure()
 @description('The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated. Use the defaultValue if the staging location is not secured.')
