@@ -18,5 +18,6 @@ Follow `.github/copilot-instructions.md`, including its maintenance validation a
 
 1. Compare the verified package(s) with `SPLatest`. If already current, follow the shared no-change rule unless a saved task-owned update awaits delivery.
 2. Update only that entry's required `Packages`/`DownloadUrl` values. Do not replace matching URLs in historical entries or change SharePoint configuration behavior.
-3. Run the shared build/validation steps and regenerate `azuredeploy.json`. Confirm it contains the selected package URLs and the diff contains only the intended source and generated changes.
-4. Open or update the PR through the shared delivery workflow. Include old/new package URLs and KB/build identity when verifiable, official evidence, and validation results; report unknown historical identity rather than inventing it.
+3. Follow the shared changelog rule and update the `Subscription-Latest` bullet under `SharePoint configuration` in `README.md` to the verified release month/year and KB link. Preserve its name/default semantics, historical version bullets, and command examples; keep already-accurate text without cosmetic changes.
+4. Run the shared build/validation steps and regenerate `azuredeploy.json`. Confirm it contains the selected package URLs, the README and changelog describe the same verified update, and the diff contains only intended source, generated, and documentation changes.
+5. Open or update the PR through the shared delivery workflow, including the required documentation in the same PR. Include old/new package URLs and KB/build identity when verifiable, official evidence, and validation results; report unknown historical identity rather than inventing it.
