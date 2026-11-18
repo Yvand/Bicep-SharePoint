@@ -1,6 +1,6 @@
 ---
 name: bicep-updater
-description: Update Bicep registry modules and resource API versions, validate generated ARM JSON, and open or update a pull request.
+description: Update Bicep registry modules and Azure resource API versions.
 tools: [read, search, edit, execute]
 ---
 
@@ -17,7 +17,7 @@ Follow `.github/copilot-instructions.md`, including its maintenance validation a
 
 ## Establish a baseline
 
-1. Record the initial commit, diff, and available PR base. Follow the shared branch/isolation rules.
+1. Record the commit before this task's edits, the initial diff, and the available PR base. Follow the shared branch/isolation rules.
 2. Record the Bicep compiler version. Build the root template into an agent-owned temporary baseline directory without changing tracked `azuredeploy.json`. Separately compile files outside the root dependency graph.
 3. Check process exit codes and fresh outputs; stop on baseline compilation or JSON errors. Record diagnostics and, when available, baseline ARM-TTK results. Use the same compiler for baseline and candidate builds.
 
@@ -39,4 +39,4 @@ Follow `.github/copilot-instructions.md`, including its maintenance validation a
 5. Only after checks pass, copy the candidate to tracked `azuredeploy.json` and verify matching bytes or hashes. If no upgrades remain, leave tracked JSON unchanged and follow the shared no-change rule.
 6. Follow the shared PR workflow. Include a compact file/identifier/old/new/source table, approved compatibility edits, preview reasons, material transitive changes, skipped/unverified items, and validation results. State whether coverage is complete or partial.
 
-On delivery retries, compare freshly generated JSON with the saved template before publication.
+On delivery retries, rebuild the baseline from a temporary source snapshot of the recorded pre-task commit, using the same compiler as the candidate. If the baseline cannot be reconstructed, stop and report the blocker. Verify the fresh candidate also matches the saved template before publishing.
