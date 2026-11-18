@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+- Template
+  - Value `Subscription-Latest` for parameter `sharePointVersion` now installs the November 2026 update for SharePoint Subscription (KB5002945)
+
 ## Enhancements & bug-fixes - Published in October 28, 2026
 
 ### Changed
