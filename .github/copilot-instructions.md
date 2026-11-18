@@ -22,3 +22,28 @@
 - Keep AVM references explicitly version-pinned in Bicep module declarations.
 - Treat `adminPassword`, `otherAccountsPassword`, and artifact access tokens as secrets: preserve secure parameter annotations and pass credentials to DSC through protected settings, not ordinary settings.
 - The supported SharePoint configuration levels and feature names are defined by the allowed values in `main.bicep`; preserve these names and the mapping from configuration levels to selected features when changing configuration behavior.
+
+## Maintenance agents
+
+These rules apply to the Bicep and SharePoint update agents.
+
+### Environment and validation
+
+- Read the initial Git status and diff; preserve unrelated files, edits, and staged changes. If task edits cannot be safely separated from existing work, ask or skip affected files when unattended. Research public identifiers and versions through official sources without exposing secrets or uploading repository code.
+- Use trusted session context to distinguish a GitHub cloud sandbox, an Actions-managed task, and a local checkout. Use the host's shell/path syntax. Missing `gh` authentication does not identify the environment or prevent research, editing, and local validation.
+- Check Azure CLI/Bicep availability. Setup steps prepare Actions sessions, not cloud sandboxes. Install missing build prerequisites from official sources only in a confirmed disposable cloud environment with existing permissions; do not silently install/upgrade tools locally. Report blocked setup without requesting credentials.
+- Never deploy, run Azure-side validation/what-if, or require subscription credentials. Local checks do not prove deployment success.
+- Require a successful build and freshly generated `azuredeploy.json`; parse it as an ARM template and inspect the source/generated diff. Never manually edit generated JSON. Distinguish baseline diagnostics from new warnings and resolve new issues caused by retained changes without repairing unrelated failures.
+- When ARM-TTK is available, run the suite above and inspect results for `Passed -eq $false`; process exit status alone is insufficient. Retained changes with build/JSON/diff/ARM-TTK failures must not be delivered as validated. If ARM-TTK is unavailable, report it as not run locally and identify the existing PR CI check; do not install it or build its Docker image just for maintenance.
+- Remove only agent-owned failed edits and revalidate the retained set. Keep recoverable work if blocked; clean up only agent-created temporary artifacts.
+
+### Pull-request delivery
+
+- After validating retained changes, open or update a PR before claiming success. A partial update is acceptable when retained changes pass and skipped items are disclosed. If there are no retained changes, do not rewrite generated JSON, create empty commits, or open a new PR; leave any host-created draft intact.
+- On delivery retries, verify and reuse saved task work, revalidate it, and resume publication. An unpublished update is not a no-change run; if ownership or intended changes cannot be established, report the ambiguity rather than publishing.
+- **Cloud sandbox:** Prefer the host's supported commit/push/PR capabilities. Use an authenticated Git/`gh` workflow only when permitted by that host; do not assume Actions-managed delivery or ban `gh pr create` solely because the session is remote.
+- **Actions-managed task:** Stay in the supplied checkout on the assigned branch and use managed commit/push/PR delivery. Do not require shell Git credentials, create a replacement branch/worktree, rewrite remotes, or bypass the managed workflow with direct push/PR commands.
+- **Git/`gh` delivery (local or permitted sandbox):** Verify the repository, intended PR base, and push remote; resolve the default branch dynamically if no base is supplied. For a new task without an assigned branch, use a dedicated branch from that base, isolating unrelated work in a worktree when needed; otherwise keep the assigned task branch. Stage only explicit agent-owned paths, commit source and generated JSON together, and push normally, never to the default branch or with force. Preserve unrelated work and never amend or bypass hooks.
+- Before creating a PR, check for an existing open PR matching repository/head/base and reuse it. With `gh`, use explicit repository, base, head, title, and body. Never invent credentials or a push destination. Respect host-enforced draft status; do not require a ready PR for success. Never merge or enable auto-merge.
+- Verify the PR URL, open state, repository, base/head, and published head commit using host results or available metadata. If publication or verification is unavailable, report incomplete delivery and the exact retained checkout/branch/commit state instead of claiming success. Report CI as pending/not checked unless its result was obtained.
+- Keep the PR body concise: changes with authoritative sources, validation/diagnostics, and skipped items with reasons. The final response can link to that detail and give the PR status or delivery blocker; do not duplicate the full report or create a report file by default.
