@@ -1,0 +1,121 @@
+name: Release template
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Stable version tag (vX.Y.Z)
+        required: true
+        type: string
+      publish:
+        description: Publish a GitHub Release (unchecked only builds and validates)
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  RELEASE_TAG: ${{ inputs.tag }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      sha256: ${{ steps.build.outputs.sha256 }}
+    steps:
+      - name: Require master
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" != refs/heads/master ]]; then
+            echo "::error::Dispatch this workflow from master."
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install release compiler
+        shell: bash
+        env:
+          AZURE_BICEP_USE_BINARY_FROM_PATH: 'false'
+        run: az bicep install --version v0.48.1
+      - name: Compile and validate the ARM JSON
+        id: build
+        shell: bash
+        env:
+          AZURE_BICEP_USE_BINARY_FROM_PATH: 'false'
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          out="$(mktemp -d "$RUNNER_TEMP/arm-release.XXXXXX")/azuredeploy.json"
+          az bicep build --file main.bicep --outfile "$out"
+          digest="$(node .github/scripts/release-template.mjs validate "$RELEASE_TAG" CHANGELOG.md "$out" azuredeploy.json)"
+          tags="$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$RELEASE_TAG" --jq '.[].ref')"
+          releases="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name')"
+          if grep -Fxq -- "refs/tags/$RELEASE_TAG" <<< "$tags" || grep -Fxq -- "$RELEASE_TAG" <<< "$releases"; then
+            echo "::error::A tag or release already exists for $RELEASE_TAG."
+            exit 1
+          fi
+          echo "Generated azuredeploy.json SHA-256: $digest"
+          {
+            echo "path=$out"
+            echo "sha256=$digest"
+          } >> "$GITHUB_OUTPUT"
+      - name: Upload the generated template
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm-template
+          path: ${{ steps.build.outputs.path }}
+          if-no-files-found: error
+
+  publish:
+    if: ${{ github.ref == 'refs/heads/master' && inputs.publish }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: template-release-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download the generated template from this run
+        uses: actions/download-artifact@v4
+        with:
+          name: arm-template
+          path: ${{ runner.temp }}/arm-template
+      - name: Verify the artifact and publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA256: ${{ needs.build.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          asset="$RUNNER_TEMP/arm-template/azuredeploy.json"
+          node .github/scripts/release-template.mjs verify "$asset" "$EXPECTED_SHA256"
+          notes="$(mktemp "$RUNNER_TEMP/release-notes.XXXXXX")"
+          node .github/scripts/release-template.mjs notes "$RELEASE_TAG" CHANGELOG.md > "$notes"
+
+          releases="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name')"
+          if grep -Fxq -- "$RELEASE_TAG" <<< "$releases"; then
+            echo "::error::A release already exists for $RELEASE_TAG."
+            exit 1
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$RELEASE_TAG" -f sha="$GITHUB_SHA" --silent
+          gh release create "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY" \
+            --verify-tag --title "$RELEASE_TAG" --notes-file "$notes"
+
+          tag_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha')"
+          if [[ "$tag_sha" != "$GITHUB_SHA" ]]; then
+            echo "::error::Published tag does not match the validated commit."
+            exit 1
+          fi
+          published="$(mktemp -d "$RUNNER_TEMP/published-arm.XXXXXX")"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern azuredeploy.json --dir "$published"
+          node .github/scripts/release-template.mjs verify "$published/azuredeploy.json" "$EXPECTED_SHA256"
