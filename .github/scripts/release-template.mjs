@@ -21,7 +21,6 @@ function releaseNotes(tag, changelogPath) {
 }
 
 function validate(tag, changelogPath, generatedPath, trackedPath) {
-  const { version } = releaseNotes(tag, changelogPath);
   const json = readText(generatedPath);
   const template = JSON.parse(json);
   if (!isObject(template) ||
@@ -33,8 +32,10 @@ function validate(tag, changelogPath, generatedPath, trackedPath) {
       Object.keys(template.resources).length === 0) {
     throw new Error('Generated file is not a valid ARM template structure.');
   }
+  const expectedTag = tag || `v${template.metadata?.version}`;
+  const { version } = releaseNotes(expectedTag, changelogPath);
   if (template.metadata?.version !== version) {
-    throw new Error(`Generated template metadata.version must match ${tag}.`);
+    throw new Error(`Generated template metadata.version must match ${expectedTag}.`);
   }
   if (json !== readText(trackedPath)) {
     throw new Error('Tracked azuredeploy.json is stale. Regenerate it with the release compiler.');

@@ -64,10 +64,10 @@ az deployment group create --name "sharepoint-quickstart" --resource-group "shar
 
 1. Choose a SemVer bump: **major** for incompatible input, output, or deployment behavior changes; **minor** for compatible additions; **patch** for compatible fixes and maintenance such as monthly SharePoint CU refreshes. Classify AVM and DSC updates by their effect on users, and call out any changed defaults.
 2. Set `metadata version` in `main.bicep`, regenerate `azuredeploy.json` with the Bicep version pinned in [`release.yml`](.github/workflows/release.yml), and move release notes from `Unreleased` to `## X.Y.Z - YYYY-MM-DD` in `CHANGELOG.md`. Merge those changes to `master`.
-3. Run **Release template** on `master` with `tag` set to `vX.Y.Z` and `publish` unchecked. Confirm it produces a downloadable ARM JSON artifact. Then dispatch again with `publish` checked. That run builds its own JSON and publishes it as the release asset; the checked-in JSON is only used to detect drift.
+3. Optionally run **Release template** manually to build, validate, and download the ARM JSON without publishing. To release, create `vX.Y.Z` at the intended commit on `master` and push that tag (`git push origin vX.Y.Z`). The tag-triggered run checks that the tag matches the template and changelog, then publishes its own freshly built JSON. The checked-in JSON is only used to detect drift.
 4. Verify the exact-version release asset is publicly downloadable and opens in the Azure portal without starting a deployment. After the first release, add stable deployment buttons pointing to that asset and update them deliberately for later releases. Never move a release tag.
 
-If publication stops after creating the tag, verify the tag points to the failed run's commit. Retrieve that run's generated artifact and confirm its SHA-256 against the run's build output before completing or repairing the same release. Do not move the tag or substitute the tracked JSON or a local build.
+If the tag-triggered run fails before creating a release, retry it for a transient failure. If source changes are needed, cut a new version instead of moving the tag. If publication was partial, verify the tag points to the run's commit and use that run's generated artifact after checking its SHA-256. Do not substitute the tracked JSON or a local build.
 
 ## SharePoint configuration
 
