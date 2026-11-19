@@ -19,7 +19,7 @@ jobs:
     outputs:
       sha256: ${{ steps.build.outputs.sha256 }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: ${{ github.event_name == 'push' && '0' || '1' }}
@@ -53,7 +53,7 @@ jobs:
             echo "sha256=$digest"
           } >> "$GITHUB_OUTPUT"
       - name: Upload the generated template
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: arm-template
           path: ${{ steps.build.outputs.path }}
@@ -69,12 +69,12 @@ jobs:
       group: template-release-publish-${{ github.ref_name }}
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
       - name: Download the generated template from this run
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: arm-template
           path: ${{ runner.temp }}/arm-template
