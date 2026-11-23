@@ -3,9 +3,9 @@
 ## Build and validation
 
 - Build the resource-group template and regenerate its checked-in ARM JSON: `az bicep build --file main.bicep --outfile azuredeploy.json`. Keep `azuredeploy.json` in sync with `main.bicep`.
-- The ARM Template Test Toolkit (ARM-TTK) suite runs in `.github/workflows/run-arm-ttk.yml` on pull requests to `master` and by manual dispatch. Locally, with ARM-TTK installed and `ARMTTK_PATH` set, run the full suite with `Import-Module "$env:ARMTTK_PATH/arm-ttk.psd1"; Test-AzTemplate -TemplatePath . -Skip "artifacts-parameter"`.
+- Locally, with the ARM Template Test Toolkit (ARM-TTK) installed and `ARMTTK_PATH` set, run the full suite with `Import-Module "$env:ARMTTK_PATH/arm-ttk.psd1"; Test-AzTemplate -TemplatePath . -Skip "artifacts-parameter"`.
 - To run one ARM-TTK test, use `Import-Module "$env:ARMTTK_PATH/arm-ttk.psd1"; Test-AzTemplate -TemplatePath . -Test <test-name>`.
-- There is no separate unit-test or lint command configured. The Bicep build performs compilation and diagnostics; the GitHub workflow runs ARM-TTK.
+- The Bicep build performs compilation and diagnostics. The release workflow validates pull requests targeting `master` and manual dispatches. Only an explicit publish request on `master` can create a version tag and release, and only after validation passes. ARM-TTK is not a CI or release gate.
 
 ## Architecture
 
@@ -13,7 +13,7 @@
 - `virtualNetwork.bicep`, `virtualMachine.bicep`, `bastion.bicep`, and `firewall.bicep` are focused modules. They provision resources through pinned Azure Verified Module (AVM) versions where applicable, while `virtualMachine.bicep` also configures the VM run command and DSC extension.
 - The virtual machines are the domain controller, SQL Server, and SharePoint main server, plus zero to four optional SharePoint front ends. Their role-specific DSC packages and configuration scripts are downloaded from the `SharePointInfraDsc` release URL configured by `_artifactsLocation`; the DSC implementation is external to this repository.
 - `main.bicepparam` is a local deployment example. `azuredeploy.json` is the compiled ARM-template counterpart of `main.bicep` and is used by the Azure Quickstart deployment links and metadata.
-- `DeployTemplate.ps1` and `.vscode/tasks.json` provide Azure PowerShell/Azure CLI deployment entry points. The GitHub Action in `action-armttk` wraps ARM-TTK for the CI workflow.
+- `DeployTemplate.ps1` and `.vscode/tasks.json` provide Azure PowerShell/Azure CLI deployment entry points.
 
 ## Repository-specific conventions
 
@@ -35,7 +35,7 @@ These rules apply to the Bicep and SharePoint update agents.
 - Never deploy, run Azure-side validation/what-if, or require subscription credentials. Local checks do not prove deployment success.
 - Attempt local Bicep validation when tooling is available. Build to a fresh temporary output, parse it as an ARM template, inspect the source and generated diffs, and update `azuredeploy.json` from the checked output. Never manually edit generated JSON or include stale, partial, or invalid build output. Always review the source diff and resolve issues known to be caused by retained changes without repairing unrelated failures.
 - Missing tooling or a build that cannot produce a usable template does not by itself block opening or updating a maintenance PR for otherwise eligible source changes. If no usable root template can be generated, leave the tracked template unchanged from before the maintenance update. Do not retain changes with known incompatibilities or present skipped or failed checks as passed.
-- When ARM-TTK and a usable fresh candidate are available, run the suite above against the candidate and inspect results for `Passed -eq $false`; process exit status alone is insufficient. If ARM-TTK cannot run, report why and identify the existing PR CI check; do not install it or build its Docker image just for maintenance. Results against the unchanged tracked template do not validate updated Bicep source.
+- When ARM-TTK and a usable fresh candidate are available, run the suite above against the candidate and inspect results for `Passed -eq $false`; process exit status alone is insufficient. If ARM-TTK cannot run, report why; do not install it just for maintenance. Results against the unchanged tracked template do not validate updated Bicep source.
 - Remove only agent-owned failed edits and revalidate the retained set. Keep recoverable work if blocked; clean up only agent-created temporary artifacts.
 
 ### Pull-request delivery

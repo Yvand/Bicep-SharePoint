@@ -30,19 +30,50 @@ This template creates a secure, highly customizable SharePoint Subscription Edit
 
 ## Usage
 
+### Versioned releases
+
+Once a release is published, use this URL to download `azuredeploy.json` from the [latest GitHub Release](https://github.com/Yvand/Bicep-SharePoint/releases/latest):
+
+```text
+https://github.com/Yvand/Bicep-SharePoint/releases/latest/download/azuredeploy.json
+```
+
+To pin the template version instead, use the asset URL from a specific release, for example:
+
+```text
+https://github.com/Yvand/Bicep-SharePoint/releases/download/releases%2Fv1.0.0/azuredeploy.json
+```
+
+Pass the asset URL to `az deployment group create --template-uri`, or URL-encode it and append it to `https://portal.azure.com/#create/Microsoft.Template/uri/` (use `portal.azure.us` for Azure US Government).
+
+The template version is separate from the `sharePointVersion` parameter and the SharePointInfraDsc version. `Subscription-Latest` selects the SharePoint update defined by that template release, not today's latest update. Pinning the template does not pin the VM images or software downloads that still use floating versions.
+
+### Development build (`master`)
+
+These links follow the development branch and can change between releases.
+
 [![Deploy To Azure](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazure.svg?sanitize=true)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FYvand%2FBicep-SharePoint%2Frefs%2Fheads%2Fmaster%2Fazuredeploy.json)
 [![Deploy To Azure US Gov](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/deploytoazuregov.svg?sanitize=true)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FYvand%2FBicep-SharePoint%2Frefs%2Fheads%2Fmaster%2Fazuredeploy.json)
 [![Visualize](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true)](http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2FYvand%2FBicep-SharePoint%2Frefs%2Fheads%2Fmaster%2Fazuredeploy.json)
 
-> **Note:** A public version of this template is available at <https://azure.microsoft.com/resources/templates/sharepoint-adfs/>
+> **Note:** The [Azure Quickstart version](https://azure.microsoft.com/resources/templates/sharepoint-adfs/) is published separately from this repository's releases.
 
-### Deploy using az cli (in PowerShell)
+### Deploy the Azure Quickstart version using Azure CLI (PowerShell)
 
 ```powershell
 az group create --location "france central" --name "sharepoint-quickstart"
 # This is an example, many other parameters / combinations are possible
 az deployment group create --name "sharepoint-quickstart" --resource-group "sharepoint-quickstart" --template-uri "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/refs/heads/master/application-workloads/sharepoint/sharepoint-adfs/azuredeploy.json" --parameters sharePointVersion='Subscription-Latest' sharePointConfigurationLevel='Custom' customSharePointConfiguration="['Addins', 'TrustedAuthentication']" adminUsername='yvand' adminPassword='<PASSWORD>' otherAccountsPassword='<PASSWORD>'
 ```
+
+### Cutting a template release
+
+1. Choose a SemVer bump: **major** for incompatible input, output, or deployment behavior changes; **minor** for compatible additions; **patch** for compatible fixes and maintenance such as monthly SharePoint CU refreshes. Classify AVM and DSC updates by their effect on users, and call out any changed defaults.
+2. Set `metadata version` in `main.bicep`, regenerate `azuredeploy.json` with the latest stable Bicep CLI, and move release notes from `Unreleased` to `## X.Y.Z - YYYY-MM-DD` in `CHANGELOG.md`. Merge those changes to `master`. The [release workflow](.github/workflows/release.yml) logs the compiler version and ignores Bicep generator metadata when comparing the generated and tracked templates. Regenerate the checked-in JSON if the template itself changes.
+3. Run **Release template** manually on `master` with **publish** checked. After validation, the workflow derives `releases/vX.Y.Z` from the compiled template metadata, creates the tag at the commit it built, and uploads the freshly built JSON to a draft release. It verifies the uploaded file's SHA-256 before making the release public. Leave **publish** unchecked to build, validate, and download the workflow artifact without creating a tag or release.
+4. Verify the exact-version release asset is publicly downloadable and opens in the Azure portal without starting a deployment. After the first release, add stable deployment buttons pointing to that asset and update them deliberately for later releases. Never move a release tag.
+
+If publication fails before the release goes public, rerun the original publish job. It can resume a draft if the tag still points to the same validated commit. Publishing an older version does not replace the **Latest** download. If a draft asset fails verification, inspect and remove the bad asset before retrying; the workflow will not overwrite it. Never move a tag or substitute the tracked JSON or a local build for the workflow artifact.
 
 ## SharePoint configuration
 

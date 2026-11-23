@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.0.0
+
+### Added
+
+- Semantic versioning for the SharePoint Subscription Edition deployment template.
+
 ## Enhancements & bug-fixes - Published in October 28, 2026
 
 ### Changed
