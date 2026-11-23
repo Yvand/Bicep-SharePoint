@@ -32,10 +32,16 @@ This template creates a secure, highly customizable SharePoint Subscription Edit
 
 ### Versioned releases
 
-Use the `azuredeploy.json` asset from a specific [GitHub Release](https://github.com/Yvand/Bicep-SharePoint/releases) to pin the template version. For example, once `v1.0.0` is published:
+Once a release is published, use this URL to download `azuredeploy.json` from the [latest GitHub Release](https://github.com/Yvand/Bicep-SharePoint/releases/latest):
 
 ```text
-https://github.com/Yvand/Bicep-SharePoint/releases/download/v1.0.0/azuredeploy.json
+https://github.com/Yvand/Bicep-SharePoint/releases/latest/download/azuredeploy.json
+```
+
+To pin the template version instead, use the asset URL from a specific release, for example:
+
+```text
+https://github.com/Yvand/Bicep-SharePoint/releases/download/releases%2Fv1.0.0/azuredeploy.json
 ```
 
 Pass the asset URL to `az deployment group create --template-uri`, or URL-encode it and append it to `https://portal.azure.com/#create/Microsoft.Template/uri/` (use `portal.azure.us` for Azure US Government).
@@ -64,7 +70,7 @@ az deployment group create --name "sharepoint-quickstart" --resource-group "shar
 
 1. Choose a SemVer bump: **major** for incompatible input, output, or deployment behavior changes; **minor** for compatible additions; **patch** for compatible fixes and maintenance such as monthly SharePoint CU refreshes. Classify AVM and DSC updates by their effect on users, and call out any changed defaults.
 2. Set `metadata version` in `main.bicep`, regenerate `azuredeploy.json` with the latest stable Bicep CLI, and move release notes from `Unreleased` to `## X.Y.Z - YYYY-MM-DD` in `CHANGELOG.md`. Merge those changes to `master`. The [release workflow](.github/workflows/release.yml) logs the compiler version it installs. If a newer compiler changes the output, regenerate the checked-in JSON before releasing.
-3. Run **Release template** manually on `master` with **publish** checked. After validation, the workflow derives `vX.Y.Z` from the compiled template metadata, creates the tag at the commit it built, and publishes the freshly built JSON. Leave **publish** unchecked to build, validate, and download the workflow artifact without creating a tag or release.
+3. Run **Release template** manually on `master` with **publish** checked. After validation, the workflow derives `releases/vX.Y.Z` from the compiled template metadata, creates the tag at the commit it built, and publishes the freshly built JSON. Leave **publish** unchecked to build, validate, and download the workflow artifact without creating a tag or release.
 4. Verify the exact-version release asset is publicly downloadable and opens in the Azure portal without starting a deployment. After the first release, add stable deployment buttons pointing to that asset and update them deliberately for later releases. Never move a release tag.
 
 If publication fails after creating the tag but before creating a release, rerun the original publish job. It can reuse the tag only if it still points to the same validated commit. Never move a tag or substitute the tracked JSON or a local build for the workflow artifact.

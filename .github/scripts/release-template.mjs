@@ -6,8 +6,8 @@ const sha256 = path => createHash('sha256').update(readFileSync(path)).digest('h
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 function releaseNotes(tag, changelogPath) {
-  const match = /^v((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))$/.exec(tag);
-  if (!match || match[0] !== tag) throw new Error('Expected a stable tag in vX.Y.Z format.');
+  const match = /^releases\/v((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))$/.exec(tag);
+  if (!match || match[0] !== tag) throw new Error('Expected a stable tag in releases/vX.Y.Z format.');
 
   const version = match[1];
   const heading = new RegExp(`^${version.replaceAll('.', '\\.')}(?: - [0-9]{4}-[0-9]{2}-[0-9]{2})?$`);
@@ -35,7 +35,7 @@ function validate(changelogPath, generatedPath, trackedPath) {
   if (typeof template.metadata?.version !== 'string') {
     throw new Error('Generated template metadata.version must be a SemVer string.');
   }
-  const tag = `v${template.metadata.version}`;
+  const tag = `releases/v${template.metadata.version}`;
   releaseNotes(tag, changelogPath);
   if (json !== readText(trackedPath)) {
     throw new Error('Tracked azuredeploy.json is stale. Regenerate it with the release compiler.');
