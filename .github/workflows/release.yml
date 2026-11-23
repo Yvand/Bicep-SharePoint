@@ -32,11 +32,13 @@ jobs:
             echo "::error::The release tag must point to a commit on master's history."
             exit 1
           fi
-      - name: Install release compiler
+      - name: Install latest stable Bicep compiler
         shell: bash
         env:
           AZURE_BICEP_USE_BINARY_FROM_PATH: 'false'
-        run: az bicep install --version v0.48.1
+        run: |
+          az bicep upgrade
+          az bicep version
       - name: Compile and validate the ARM JSON
         id: build
         shell: bash

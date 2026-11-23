@@ -63,7 +63,7 @@ az deployment group create --name "sharepoint-quickstart" --resource-group "shar
 ### Cutting a template release
 
 1. Choose a SemVer bump: **major** for incompatible input, output, or deployment behavior changes; **minor** for compatible additions; **patch** for compatible fixes and maintenance such as monthly SharePoint CU refreshes. Classify AVM and DSC updates by their effect on users, and call out any changed defaults.
-2. Set `metadata version` in `main.bicep`, regenerate `azuredeploy.json` with the Bicep version pinned in [`release.yml`](.github/workflows/release.yml), and move release notes from `Unreleased` to `## X.Y.Z - YYYY-MM-DD` in `CHANGELOG.md`. Merge those changes to `master`.
+2. Set `metadata version` in `main.bicep`, regenerate `azuredeploy.json` with the latest stable Bicep CLI, and move release notes from `Unreleased` to `## X.Y.Z - YYYY-MM-DD` in `CHANGELOG.md`. Merge those changes to `master`. The [release workflow](.github/workflows/release.yml) logs the version it installs. If a newer compiler changes the output, regenerate the checked-in JSON before tagging.
 3. Optionally run **Release template** manually to build, validate, and download the ARM JSON without publishing. To release, create `vX.Y.Z` at the intended commit on `master` and push that tag (`git push origin vX.Y.Z`). The tag-triggered run checks that the tag matches the template and changelog, then publishes its own freshly built JSON. The checked-in JSON is only used to detect drift.
 4. Verify the exact-version release asset is publicly downloadable and opens in the Azure portal without starting a deployment. After the first release, add stable deployment buttons pointing to that asset and update them deliberately for later releases. Never move a release tag.
 
