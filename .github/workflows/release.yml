@@ -111,22 +111,35 @@ jobs:
               exit 1
             fi
           }
-          releases="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name')"
-          if grep -Fxq -- "$RELEASE_TAG" <<< "$releases"; then
-            echo "::error::A release already exists for $RELEASE_TAG."
+          releases="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq \
+            '.[] | [.tag_name, .draft, any(.assets[]; .name == "azuredeploy.json")] | @tsv')"
+          release_state="$(awk -F '\t' -v tag="$RELEASE_TAG" '$1 == tag { print $2, $3 }' <<< "$releases")"
+          if [[ -n "$release_state" && "$release_state" != 'true true' && "$release_state" != 'true false' ]]; then
+            echo "::error::Expected no release or a single draft for $RELEASE_TAG."
             exit 1
           fi
           tag_sha="$(resolve_tag)"
           if [[ -z "$tag_sha" ]]; then
+            if [[ -n "$release_state" ]]; then
+              echo "::error::Cannot resume a draft whose tag is missing."
+              exit 1
+            fi
             gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref="$tag_ref" -f sha="$commit" --silent
           fi
           verify_tag
-          gh release create "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY" \
-            --verify-tag --title "${RELEASE_TAG#releases/}" --notes-file "$notes"
 
-          verify_tag
-          published="$(mktemp -d "$RUNNER_TEMP/published-arm.XXXXXX")"
+          if [[ -z "$release_state" ]]; then
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+              --draft --verify-tag --title "${RELEASE_TAG#releases/}" --notes-file "$notes"
+          fi
+          if [[ "$release_state" != 'true true' ]]; then
+            gh release upload "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY"
+          fi
+
+          draft_assets="$(mktemp -d "$RUNNER_TEMP/draft-arm.XXXXXX")"
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
-            --pattern azuredeploy.json --dir "$published"
-          node .github/scripts/release-template.mjs verify "$published/azuredeploy.json" "$EXPECTED_SHA256"
+            --pattern azuredeploy.json --dir "$draft_assets"
+          node .github/scripts/release-template.mjs verify "$draft_assets/azuredeploy.json" "$EXPECTED_SHA256"
+          verify_tag
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft=false

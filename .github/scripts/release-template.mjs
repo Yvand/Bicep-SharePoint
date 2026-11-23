@@ -1,9 +1,24 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { isDeepStrictEqual } from 'node:util';
 
 const readText = path => readFileSync(path, 'utf8').replaceAll('\r\n', '\n');
 const sha256 = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+function withoutBicepGenerator(template) {
+  if (!isObject(template)) return template;
+  if (template.metadata?._generator?.name === 'bicep') {
+    delete template.metadata._generator;
+    if (Object.keys(template.metadata).length === 0) delete template.metadata;
+  }
+  for (const resource of Object.values(template.resources ?? {})) {
+    if (resource?.type === 'Microsoft.Resources/deployments') {
+      withoutBicepGenerator(resource.properties?.template);
+    }
+  }
+  return template;
+}
 
 function releaseNotes(tag, changelogPath) {
   const match = /^releases\/v((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))$/.exec(tag);
@@ -37,7 +52,8 @@ function validate(changelogPath, generatedPath, trackedPath) {
   }
   const tag = `releases/v${template.metadata.version}`;
   releaseNotes(tag, changelogPath);
-  if (json !== readText(trackedPath)) {
+  const tracked = JSON.parse(readText(trackedPath));
+  if (!isDeepStrictEqual(withoutBicepGenerator(template), withoutBicepGenerator(tracked))) {
     throw new Error('Tracked azuredeploy.json is stale. Regenerate it with the release compiler.');
   }
   console.log(`${tag} ${sha256(generatedPath)}`);
