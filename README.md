@@ -66,15 +66,6 @@ az group create --location "france central" --name "sharepoint-quickstart"
 az deployment group create --name "sharepoint-quickstart" --resource-group "sharepoint-quickstart" --template-uri "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/refs/heads/master/application-workloads/sharepoint/sharepoint-adfs/azuredeploy.json" --parameters sharePointVersion='Subscription-Latest' sharePointConfigurationLevel='Custom' customSharePointConfiguration="['Addins', 'TrustedAuthentication']" adminUsername='yvand' adminPassword='<PASSWORD>' otherAccountsPassword='<PASSWORD>'
 ```
 
-### Cutting a template release
-
-1. Choose a SemVer bump: **major** for incompatible input, output, or deployment behavior changes; **minor** for compatible additions; **patch** for compatible fixes and maintenance such as monthly SharePoint CU refreshes. Classify AVM and DSC updates by their effect on users, and call out any changed defaults.
-2. Set `metadata version` in `main.bicep`, regenerate `azuredeploy.json` with the latest stable Bicep CLI, and move release notes from `Unreleased` to `## X.Y.Z - YYYY-MM-DD` in `CHANGELOG.md`. Merge those changes to `master`. The [release workflow](.github/workflows/release.yml) logs the compiler version and ignores Bicep generator metadata when comparing the generated and tracked templates. Regenerate the checked-in JSON if the template itself changes.
-3. Run **Release template** manually on `master` with **publish** checked. After validation, the workflow derives `releases/vX.Y.Z` from the compiled template metadata, creates the tag at the commit it built, and uploads the freshly built JSON to a draft release. It verifies the uploaded file's SHA-256 before making the release public. Leave **publish** unchecked to build, validate, and download the workflow artifact without creating a tag or release.
-4. Verify the exact-version release asset is publicly downloadable and opens in the Azure portal without starting a deployment. After the first release, add stable deployment buttons pointing to that asset and update them deliberately for later releases. Never move a release tag.
-
-If publication fails before the release goes public, rerun the original publish job. It can resume a draft if the tag still points to the same validated commit. Publishing an older version does not replace the **Latest** download. If a draft asset fails verification, inspect and remove the bad asset before retrying; the workflow will not overwrite it. Never move a tag or substitute the tracked JSON or a local build for the workflow artifact.
-
 ## SharePoint configuration
 
 - Parameter `sharePointVersion` sets which version of SharePoint Subscription Edition will be installed:
