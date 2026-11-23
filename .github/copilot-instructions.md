@@ -5,7 +5,7 @@
 - Build the resource-group template and regenerate its checked-in ARM JSON: `az bicep build --file main.bicep --outfile azuredeploy.json`. Keep `azuredeploy.json` in sync with `main.bicep`.
 - Locally, with the ARM Template Test Toolkit (ARM-TTK) installed and `ARMTTK_PATH` set, run the full suite with `Import-Module "$env:ARMTTK_PATH/arm-ttk.psd1"; Test-AzTemplate -TemplatePath . -Skip "artifacts-parameter"`.
 - To run one ARM-TTK test, use `Import-Module "$env:ARMTTK_PATH/arm-ttk.psd1"; Test-AzTemplate -TemplatePath . -Test <test-name>`.
-- The Bicep build performs compilation and diagnostics. The release workflow builds and validates pull requests targeting `master` and manual dispatches, and publishes only on a new release tag push; ARM-TTK is not a CI or release gate.
+- The Bicep build performs compilation and diagnostics. The release workflow validates pull requests targeting `master` and manual dispatches. Only an explicit publish request on `master` can create a version tag and release, and only after validation passes. ARM-TTK is not a CI or release gate.
 
 ## Architecture
 

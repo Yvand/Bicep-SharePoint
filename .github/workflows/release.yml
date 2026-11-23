@@ -3,37 +3,33 @@ name: Release template
 on:
   pull_request:
     branches: [master]
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Create the version tag and publish after validation
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
-env:
-  RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || '' }}
-
 jobs:
   build:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.created && !github.event.deleted) }}
     runs-on: ubuntu-latest
     outputs:
       sha256: ${{ steps.build.outputs.sha256 }}
+      tag: ${{ steps.build.outputs.tag }}
     steps:
+      - name: Require master for publishing
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && github.ref != 'refs/heads/master' }}
+        shell: bash
+        run: |
+          echo "::error::Select master when requesting publication."
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
-          fetch-depth: ${{ github.event_name == 'push' && '0' || '1' }}
           persist-credentials: false
-      - name: Require the tagged commit to be on master
-        if: ${{ github.event_name == 'push' }}
-        shell: bash
-        run: |
-          if ! git merge-base --is-ancestor HEAD refs/remotes/origin/master; then
-            echo "::error::The release tag must point to a commit on master's history."
-            exit 1
-          fi
       - name: Install latest stable Bicep compiler
         shell: bash
         env:
@@ -50,11 +46,13 @@ jobs:
           set -euo pipefail
           out="$(mktemp -d "$RUNNER_TEMP/arm-release.XXXXXX")/azuredeploy.json"
           az bicep build --file main.bicep --outfile "$out"
-          digest="$(node .github/scripts/release-template.mjs validate "$RELEASE_TAG" CHANGELOG.md "$out" azuredeploy.json)"
-          echo "Generated azuredeploy.json SHA-256: $digest"
+          result="$(node .github/scripts/release-template.mjs validate CHANGELOG.md "$out" azuredeploy.json)"
+          read -r tag digest <<< "$result"
+          echo "Generated azuredeploy.json for $tag (SHA-256: $digest)"
           {
             echo "path=$out"
             echo "sha256=$digest"
+            echo "tag=$tag"
           } >> "$GITHUB_OUTPUT"
       - name: Upload the generated template
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -64,13 +62,13 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: ${{ github.event_name == 'push' && github.event.created && !github.event.deleted }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/master' }}
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     concurrency:
-      group: template-release-publish-${{ github.ref_name }}
+      group: template-release-publish-${{ needs.build.outputs.tag }}
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -87,6 +85,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EXPECTED_SHA256: ${{ needs.build.outputs.sha256 }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
         run: |
           set -euo pipefail
           asset="$RUNNER_TEMP/arm-template/azuredeploy.json"
@@ -96,25 +95,33 @@ jobs:
 
           commit="$(git rev-parse HEAD)"
           tag_ref="refs/tags/$RELEASE_TAG"
-          verify_tag() {
+          resolve_tag() {
             # Use the peeled commit for annotated tags and the raw ref for lightweight tags.
-            tag_sha="$(git ls-remote --exit-code origin "$tag_ref" "$tag_ref^{}" | awk -v ref="$tag_ref" '
+            git ls-remote origin "$tag_ref" "$tag_ref^{}" | awk -v ref="$tag_ref" '
               $2 == ref { raw = $1 }
               $2 == ref "^{}" { peeled = $1 }
               END { print (peeled ? peeled : raw) }
-            ')"
+            '
+          }
+          verify_tag() {
+            local tag_sha
+            tag_sha="$(resolve_tag)"
             if [[ "$tag_sha" != "$commit" ]]; then
               echo "::error::The release tag does not match the validated commit."
               exit 1
             fi
           }
-          verify_tag
-
           releases="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name')"
           if grep -Fxq -- "$RELEASE_TAG" <<< "$releases"; then
             echo "::error::A release already exists for $RELEASE_TAG."
             exit 1
           fi
+          tag_sha="$(resolve_tag)"
+          if [[ -z "$tag_sha" ]]; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="$tag_ref" -f sha="$commit" --silent
+          fi
+          verify_tag
           gh release create "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY" \
             --verify-tag --title "$RELEASE_TAG" --notes-file "$notes"
 
