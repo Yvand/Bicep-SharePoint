@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 2.0.0 - Published in November 23, 2026
+## 2.0.0 - 2026-11-23
 
 ### Changed
 
