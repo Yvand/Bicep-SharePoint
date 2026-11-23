@@ -7,6 +7,12 @@
 - Template
   - Value `Subscription-Latest` for parameter `sharePointVersion` now installs the November 2026 update for SharePoint Subscription (KB5002945)
 
+## 1.0.0
+
+### Added
+
+- Semantic versioning for the SharePoint Subscription Edition deployment template.
+
 ## Enhancements & bug-fixes - Published in October 28, 2026
 
 ### Changed

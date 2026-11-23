@@ -1,0 +1,148 @@
+name: Release template
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Create the version tag and publish after validation
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      sha256: ${{ steps.build.outputs.sha256 }}
+      tag: ${{ steps.build.outputs.tag }}
+    steps:
+      - name: Require master for publishing
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && github.ref != 'refs/heads/master' }}
+        shell: bash
+        run: |
+          echo "::error::Select master when requesting publication."
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install latest stable Bicep compiler
+        shell: bash
+        env:
+          AZURE_BICEP_USE_BINARY_FROM_PATH: 'false'
+        run: |
+          az bicep upgrade
+          az bicep version
+      - name: Compile and validate the ARM JSON
+        id: build
+        shell: bash
+        env:
+          AZURE_BICEP_USE_BINARY_FROM_PATH: 'false'
+        run: |
+          set -euo pipefail
+          out="$(mktemp -d "$RUNNER_TEMP/arm-release.XXXXXX")/azuredeploy.json"
+          az bicep build --file main.bicep --outfile "$out"
+          result="$(node .github/scripts/release-template.mjs validate CHANGELOG.md "$out" azuredeploy.json)"
+          read -r tag digest <<< "$result"
+          echo "Generated azuredeploy.json for $tag (SHA-256: $digest)"
+          {
+            echo "path=$out"
+            echo "sha256=$digest"
+            echo "tag=$tag"
+          } >> "$GITHUB_OUTPUT"
+      - name: Upload the generated template
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: arm-template
+          path: ${{ steps.build.outputs.path }}
+          if-no-files-found: error
+
+  publish:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/master' }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: template-release-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download the generated template from this run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: arm-template
+          path: ${{ runner.temp }}/arm-template
+      - name: Verify the artifact and publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA256: ${{ needs.build.outputs.sha256 }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          asset="$RUNNER_TEMP/arm-template/azuredeploy.json"
+          node .github/scripts/release-template.mjs verify "$asset" "$EXPECTED_SHA256"
+          notes="$(mktemp "$RUNNER_TEMP/release-notes.XXXXXX")"
+          node .github/scripts/release-template.mjs notes "$RELEASE_TAG" CHANGELOG.md > "$notes"
+
+          commit="$(git rev-parse HEAD)"
+          tag_ref="refs/tags/$RELEASE_TAG"
+          resolve_tag() {
+            # Use the peeled commit for annotated tags and the raw ref for lightweight tags.
+            git ls-remote origin "$tag_ref" "$tag_ref^{}" | awk -v ref="$tag_ref" '
+              $2 == ref { raw = $1 }
+              $2 == ref "^{}" { peeled = $1 }
+              END { print (peeled ? peeled : raw) }
+            '
+          }
+          verify_tag() {
+            local tag_sha
+            tag_sha="$(resolve_tag)"
+            if [[ "$tag_sha" != "$commit" ]]; then
+              echo "::error::The release tag does not match the validated commit."
+              exit 1
+            fi
+          }
+          releases="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq \
+            '.[] | [.tag_name, .draft, any(.assets[]; .name == "azuredeploy.json")] | @tsv')"
+          release_state="$(awk -F '\t' -v tag="$RELEASE_TAG" '$1 == tag { print $2, $3 }' <<< "$releases")"
+          if [[ -n "$release_state" && "$release_state" != 'true true' && "$release_state" != 'true false' ]]; then
+            echo "::error::Expected no release or a single draft for $RELEASE_TAG."
+            exit 1
+          fi
+          tag_sha="$(resolve_tag)"
+          if [[ -z "$tag_sha" ]]; then
+            if [[ -n "$release_state" ]]; then
+              echo "::error::Cannot resume a draft whose tag is missing."
+              exit 1
+            fi
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="$tag_ref" -f sha="$commit" --silent
+          fi
+          verify_tag
+
+          if [[ -z "$release_state" ]]; then
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+              --draft --verify-tag --title "${RELEASE_TAG#releases/}" --notes-file "$notes"
+          fi
+          if [[ "$release_state" != 'true true' ]]; then
+            gh release upload "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY"
+          fi
+
+          draft_assets="$(mktemp -d "$RUNNER_TEMP/draft-arm.XXXXXX")"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern azuredeploy.json --dir "$draft_assets"
+          node .github/scripts/release-template.mjs verify "$draft_assets/azuredeploy.json" "$EXPECTED_SHA256"
+          verify_tag
+          latest="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq \
+            '.[] | select(.draft == false and .prerelease == false) | .tag_name' |
+            node .github/scripts/release-template.mjs is-latest "$RELEASE_TAG")"
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft=false --latest="$latest"
