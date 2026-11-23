@@ -5,6 +5,7 @@ import { isDeepStrictEqual } from 'node:util';
 const readText = path => readFileSync(path, 'utf8').replaceAll('\r\n', '\n');
 const sha256 = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+const releaseTagPattern = /^releases\/v((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))$/;
 
 function withoutBicepGenerator(template) {
   if (!isObject(template)) return template;
@@ -20,11 +21,31 @@ function withoutBicepGenerator(template) {
   return template;
 }
 
-function releaseNotes(tag, changelogPath) {
-  const match = /^releases\/v((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))$/.exec(tag);
-  if (!match || match[0] !== tag) throw new Error('Expected a stable tag in releases/vX.Y.Z format.');
+function releaseVersion(tag) {
+  const match = releaseTagPattern.exec(tag);
+  return match && match[0] === tag ? match[1] : undefined;
+}
 
-  const version = match[1];
+function requireReleaseVersion(tag) {
+  const version = releaseVersion(tag);
+  if (!version) throw new Error('Expected a stable tag in releases/vX.Y.Z format.');
+  return version;
+}
+
+function isLatest(tag, publishedTags) {
+  const candidate = requireReleaseVersion(tag).split('.').map(BigInt);
+  for (const publishedTag of publishedTags.split(/\r?\n/)) {
+    const version = releaseVersion(publishedTag);
+    if (!version) continue;
+    const published = version.split('.').map(BigInt);
+    const diff = candidate.findIndex((part, index) => part !== published[index]);
+    if (diff === -1 || candidate[diff] < published[diff]) return false;
+  }
+  return true;
+}
+
+function releaseNotes(tag, changelogPath) {
+  const version = requireReleaseVersion(tag);
   const heading = new RegExp(`^${version.replaceAll('.', '\\.')}(?: - [0-9]{4}-[0-9]{2}-[0-9]{2})?$`);
   const sections = readText(changelogPath).split(/^## /m).slice(1);
   const matches = sections.filter(section => heading.test(section.split('\n', 1)[0]));
@@ -65,6 +86,8 @@ try {
     validate(...args);
   } else if (command === 'notes') {
     console.log(releaseNotes(...args).notes);
+  } else if (command === 'is-latest') {
+    console.log(isLatest(args[0], readText(0)));
   } else if (command === 'verify') {
     const [path, expected] = args;
     if (!expected || sha256(path) !== expected) throw new Error('ARM artifact SHA-256 verification failed.');

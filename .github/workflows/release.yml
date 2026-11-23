@@ -68,7 +68,7 @@ jobs:
     permissions:
       contents: write
     concurrency:
-      group: template-release-publish-${{ needs.build.outputs.tag }}
+      group: template-release-publish
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -142,4 +142,7 @@ jobs:
             --pattern azuredeploy.json --dir "$draft_assets"
           node .github/scripts/release-template.mjs verify "$draft_assets/azuredeploy.json" "$EXPECTED_SHA256"
           verify_tag
-          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft=false
+          latest="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq \
+            '.[] | select(.draft == false and .prerelease == false) | .tag_name' |
+            node .github/scripts/release-template.mjs is-latest "$RELEASE_TAG")"
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft=false --latest="$latest"

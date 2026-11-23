@@ -73,7 +73,7 @@ az deployment group create --name "sharepoint-quickstart" --resource-group "shar
 3. Run **Release template** manually on `master` with **publish** checked. After validation, the workflow derives `releases/vX.Y.Z` from the compiled template metadata, creates the tag at the commit it built, and uploads the freshly built JSON to a draft release. It verifies the uploaded file's SHA-256 before making the release public. Leave **publish** unchecked to build, validate, and download the workflow artifact without creating a tag or release.
 4. Verify the exact-version release asset is publicly downloadable and opens in the Azure portal without starting a deployment. After the first release, add stable deployment buttons pointing to that asset and update them deliberately for later releases. Never move a release tag.
 
-If publication fails before the release goes public, rerun the original publish job. It can resume a draft if the tag still points to the same validated commit. If a draft asset fails verification, inspect and remove the bad asset before retrying; the workflow will not overwrite it. Never move a tag or substitute the tracked JSON or a local build for the workflow artifact.
+If publication fails before the release goes public, rerun the original publish job. It can resume a draft if the tag still points to the same validated commit. Publishing an older version does not replace the **Latest** download. If a draft asset fails verification, inspect and remove the bad asset before retrying; the workflow will not overwrite it. Never move a tag or substitute the tracked JSON or a local build for the workflow artifact.
 
 ## SharePoint configuration
 
